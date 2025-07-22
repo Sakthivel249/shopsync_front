@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import EmployeeManagement from './EmployeeManagement';
-
-// Placeholder components for other sections
-const ProductManagement = () => <div className="management-section"><h2>Manage Products</h2><p>Product management interface goes here.</p></div>;
-const SectionManagement = () => <div className="management-section"><h2>Manage Sections</h2><p>Section management interface goes here.</p></div>;
-const ReceiptManagement = () => <div className="management-section"><h2>Manage Receipts</h2><p>Receipt management interface goes here.</p></div>;
+import ProductManagement from './ProductManagement';
+import SectionManagement from './SectionManagement';
+import ReceiptManagement from './ReceiptManagement'; // Import the final component
 
 function AdminDashboard({ userData, onLogout }) {
     const [activeView, setActiveView] = useState('employees');
@@ -14,11 +12,11 @@ function AdminDashboard({ userData, onLogout }) {
             case 'employees':
                 return <EmployeeManagement userData={userData} />;
             case 'products':
-                return <ProductManagement />;
+                return <ProductManagement userData={userData} />;
             case 'sections':
-                return <SectionManagement />;
+                return <SectionManagement userData={userData} />;
             case 'receipts':
-                return <ReceiptManagement />;
+                return <ReceiptManagement userData={userData} />; // Use the final component
             default:
                 return <EmployeeManagement userData={userData} />;
         }
