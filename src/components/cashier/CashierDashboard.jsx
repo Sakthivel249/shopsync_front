@@ -1,39 +1,16 @@
-import React, { useState } from 'react';
-import CreateReceipt from './CreateReceipt';
-import ViewMyReceipts from './ViewMyReceipts';
+import React from 'react';
+// Import the admin's receipt management component
+import ReceiptManagement from './ReceiptManagement1.jsx';
 
 function CashierDashboard({ userData, onLogout }) {
-    const [activeView, setActiveView] = useState('create');
-
-    const renderActiveView = () => {
-        switch (activeView) {
-            case 'create':
-                return <CreateReceipt userData={userData} />;
-            case 'view':
-                return <ViewMyReceipts userData={userData} />;
-            default:
-                return <CreateReceipt userData={userData} />;
-        }
-    };
-
     return (
         <div className="admin-dashboard">
             <div className="sidebar">
                 <h3>Cashier Panel</h3>
                 <nav>
                     <ul>
-                        <li
-                            className={activeView === 'create' ? 'active' : ''}
-                            onClick={() => setActiveView('create')}
-                        >
-                            Create Receipt
-                        </li>
-                        <li
-                            className={activeView === 'view' ? 'active' : ''}
-                            onClick={() => setActiveView('view')}
-                        >
-                            View My Receipts
-                        </li>
+                        {/* The sidebar is simplified as there's only one view now */}
+                        <li className="active">Manage Receipts</li>
                     </ul>
                 </nav>
                 <div className="sidebar-footer">
@@ -42,7 +19,8 @@ function CashierDashboard({ userData, onLogout }) {
                 </div>
             </div>
             <div className="main-content">
-                {renderActiveView()}
+                {/* Render the same component the admin uses */}
+                <ReceiptManagement userData={userData} />
             </div>
         </div>
     );

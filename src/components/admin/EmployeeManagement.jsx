@@ -7,9 +7,10 @@ function EmployeeManagement({ userData }) {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
 
-    // State for the modal and form
+    // State for the modals
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingEmployee, setEditingEmployee] = useState(null);
+    const [viewingEmployee, setViewingEmployee] = useState(null);
 
     const getAuthHeaders = () => ({
         'Content-Type': 'application/json',
@@ -56,6 +57,7 @@ function EmployeeManagement({ userData }) {
             closeModal();
             await fetchEmployees();
         } catch (err) {
+            // Set error in the form modal
             setError(err.message);
         }
     };
@@ -90,16 +92,18 @@ function EmployeeManagement({ userData }) {
         setError('');
     };
 
+    // Close all modals and reset states
     const closeModal = () => {
         setIsModalOpen(false);
         setEditingEmployee(null);
+        setViewingEmployee(null);
         setError('');
     };
 
     return (
         <div className="management-section">
             <h2>Manage Employees</h2>
-            {error && !isModalOpen && <p className="error-message">{error}</p>}
+            {error && !isModalOpen && !viewingEmployee && <p className="error-message">{error}</p>}
             <button className="add-new-btn" onClick={openModalForCreate}>Add New Employee</button>
 
             {isLoading ? <p>Loading employees...</p> : (
@@ -123,6 +127,8 @@ function EmployeeManagement({ userData }) {
                             <td>{emp.email}</td>
                             <td><span className={`role-badge role-${emp.role.toLowerCase()}`}>{emp.role}</span></td>
                             <td>
+                                {/* ADDED THE "VIEW" BUTTON HERE */}
+                                <button className="action-btn view-btn" onClick={() => setViewingEmployee(emp)}>View</button>
                                 <button className="action-btn edit-btn" onClick={() => openModalForEdit(emp)}>Edit</button>
                                 <button className="action-btn delete-btn" onClick={() => handleDelete(emp.id)}>Delete</button>
                             </td>
@@ -140,20 +146,53 @@ function EmployeeManagement({ userData }) {
                     error={error}
                 />
             )}
+
+            {/* ADDED THE VIEW MODAL RENDER LOGIC */}
+            {viewingEmployee && (
+                <EmployeeViewModal
+                    employee={viewingEmployee}
+                    onClose={closeModal}
+                />
+            )}
         </div>
     );
 }
 
-// === ALL CHANGES ARE IN THIS COMPONENT BELOW ===
+// ADDED THE VIEW MODAL COMPONENT
+function EmployeeViewModal({ employee, onClose }) {
+    if (!employee) return null;
+
+    return (
+        <div className="modal-overlay">
+            <div className="modal-content">
+                <h2>Employee Details</h2>
+                <div className="user-info" style={{ backgroundColor: '#fff', padding: 0 }}>
+                    <p><strong>ID:</strong> {employee.id}</p>
+                    <p><strong>Name:</strong> {employee.f_name} {employee.l_name}</p>
+                    <p><strong>Email:</strong> {employee.email}</p>
+                    <p><strong>Phone:</strong> {employee.phoneNo}</p>
+                    <p><strong>Address:</strong> {employee.address}</p>
+                    <p><strong>Role:</strong> {employee.role}</p>
+                    <p><strong>Salary:</strong> ${employee.salary ? employee.salary.toLocaleString() : 'N/A'}</p>
+                </div>
+                <div className="modal-actions">
+                    <button type="button" className="action-btn" onClick={onClose}>Close</button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+
 function EmployeeFormModal({ employee, onClose, onSubmit, error }) {
     const [formData, setFormData] = useState({
         f_name: employee?.f_name || '',
         l_name: employee?.l_name || '',
-        address: employee?.address || '', // Added
+        address: employee?.address || '',
         email: employee?.email || '',
-        phoneNo: employee?.phoneNo || '', // Added
-        salary: employee?.salary || '',   // Added
-        password: '', // Always empty for security
+        phoneNo: employee?.phoneNo || '',
+        salary: employee?.salary || '',
+        password: '',
         role: employee?.role || 'CASHIER',
     });
 
@@ -170,10 +209,8 @@ function EmployeeFormModal({ employee, onClose, onSubmit, error }) {
         if (isUpdating && !dataToSend.password) {
             delete dataToSend.password;
         }
-        // Convert numeric fields from string to number before sending
         dataToSend.phoneNo = Number(dataToSend.phoneNo);
         dataToSend.salary = Number(dataToSend.salary);
-
         onSubmit(dataToSend);
     };
 
@@ -183,7 +220,6 @@ function EmployeeFormModal({ employee, onClose, onSubmit, error }) {
                 <form onSubmit={handleSubmit}>
                     <h2>{isUpdating ? 'Edit Employee' : 'Create New Employee'}</h2>
                     {error && <p className="error-message">{error}</p>}
-
                     <div className="input-group">
                         <label>First Name</label>
                         <input name="f_name" value={formData.f_name} onChange={handleChange} required />
@@ -220,7 +256,6 @@ function EmployeeFormModal({ employee, onClose, onSubmit, error }) {
                             <option value="ADMIN">Admin</option>
                         </select>
                     </div>
-
                     <div className="modal-actions">
                         <button type="submit" className="action-btn edit-btn">{isUpdating ? 'Update' : 'Create'}</button>
                         <button type="button" className="action-btn" onClick={onClose}>Cancel</button>

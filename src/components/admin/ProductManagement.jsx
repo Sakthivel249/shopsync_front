@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 
 const API_URL = 'http://localhost:8080/api/admin/products';
+const SECTIONS_API_URL = 'http://localhost:8080/api/admin/sections';
 
 function ProductManagement({ userData }) {
     const [products, setProducts] = useState([]);
+    const [sections, setSections] = useState([]); // State to hold sections
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -14,17 +16,24 @@ function ProductManagement({ userData }) {
         'loggedInEmail': userData.email,
     });
 
-    const fetchProducts = async () => {
+    // This function now fetches both products and sections
+    const fetchData = async () => {
         setIsLoading(true);
         setError('');
         try {
-            const response = await fetch(API_URL, { headers: getAuthHeaders() });
-            if (!response.ok) {
-                const errData = await response.json();
-                throw new Error(errData.error || 'Failed to fetch products');
-            }
-            const data = await response.json();
-            setProducts(data);
+            const [productsResponse, sectionsResponse] = await Promise.all([
+                fetch(API_URL, { headers: getAuthHeaders() }),
+                fetch(SECTIONS_API_URL, { headers: getAuthHeaders() })
+            ]);
+
+            if (!productsResponse.ok) throw new Error('Failed to fetch products');
+            if (!sectionsResponse.ok) throw new Error('Failed to fetch sections');
+
+            const productsData = await productsResponse.json();
+            const sectionsData = await sectionsResponse.json();
+
+            setProducts(productsData);
+            setSections(sectionsData);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -33,20 +42,18 @@ function ProductManagement({ userData }) {
     };
 
     useEffect(() => {
-        fetchProducts();
+        fetchData();
     }, []);
 
     const handleCreateOrUpdate = async (productData) => {
+        // Find the full section object to send to the backend
+        const section = sections.find(s => s.id === parseInt(productData.sectionId));
+        const payload = { ...productData, section };
+        delete payload.sectionId; // Clean up the temporary ID
+
         const isUpdating = !!editingProduct;
         const url = isUpdating ? `${API_URL}/${editingProduct.id}` : API_URL;
         const method = isUpdating ? 'PUT' : 'POST';
-
-        // Convert numeric fields from string to number before sending
-        const payload = {
-            ...productData,
-            price: parseFloat(productData.price),
-            quantity: parseInt(productData.quantity, 10),
-        };
 
         try {
             const response = await fetch(url, { method, headers: getAuthHeaders(), body: JSON.stringify(payload) });
@@ -55,7 +62,7 @@ function ProductManagement({ userData }) {
                 throw new Error(errData.error || `Failed to ${isUpdating ? 'update' : 'create'} product`);
             }
             closeModal();
-            await fetchProducts(); // Refresh the list
+            await fetchData();
         } catch (err) {
             setError(err.message);
         }
@@ -69,30 +76,16 @@ function ProductManagement({ userData }) {
                     const errData = await response.json();
                     throw new Error(errData.error || 'Failed to delete product');
                 }
-                await fetchProducts();
+                await fetchData();
             } catch (err) {
                 setError(err.message);
             }
         }
     };
 
-    const openModalForCreate = () => {
-        setEditingProduct(null);
-        setIsModalOpen(true);
-        setError('');
-    };
-
-    const openModalForEdit = (product) => {
-        setEditingProduct(product);
-        setIsModalOpen(true);
-        setError('');
-    };
-
-    const closeModal = () => {
-        setIsModalOpen(false);
-        setEditingProduct(null);
-        setError('');
-    };
+    const openModalForCreate = () => { setEditingProduct(null); setIsModalOpen(true); setError(''); };
+    const openModalForEdit = (product) => { setEditingProduct(product); setIsModalOpen(true); setError(''); };
+    const closeModal = () => { setIsModalOpen(false); setEditingProduct(null); setError(''); };
 
     return (
         <div className="management-section">
@@ -101,38 +94,51 @@ function ProductManagement({ userData }) {
             <button className="add-new-btn" onClick={openModalForCreate}>Add New Product</button>
 
             {isLoading ? <p>Loading...</p> : (
-                <table>
-                    <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Name</th>
-                        <th>Price ($)</th>
-                        <th>Quantity</th>
-                        <th>Category</th>
-                        <th>Actions</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {products.map(p => (
-                        <tr key={p.id}>
-                            <td>{p.id}</td>
-                            <td>{p.name}</td>
-                            <td>{p.price.toFixed(2)}</td>
-                            <td>{p.quantity}</td>
-                            <td>{p.category}</td>
-                            <td>
-                                <button className="action-btn edit-btn" onClick={() => openModalForEdit(p)}>Edit</button>
-                                <button className="action-btn delete-btn" onClick={() => handleDelete(p.id)}>Delete</button>
-                            </td>
-                        </tr>
-                    ))}
-                    </tbody>
-                </table>
+                <div>
+                    {/* --- THIS IS THE NEW LOGIC TO GROUP PRODUCTS BY SECTION --- */}
+                    {sections.map(section => {
+                        const productsInSection = products.filter(p => p.section?.id === section.id);
+
+                        if (productsInSection.length === 0) return null; // Don't show empty sections
+
+                        return (
+                            <div key={section.id} className="section-group">
+                                <h3 className="section-header">{section.name}</h3>
+                                <table>
+                                    <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Name</th>
+                                        <th>Price ($)</th>
+                                        <th>Quantity</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {productsInSection.map(p => (
+                                        <tr key={p.id}>
+                                            <td>{p.id}</td>
+                                            <td>{p.name}</td>
+                                            <td>{p.price.toFixed(2)}</td>
+                                            <td>{p.quantity}</td>
+                                            <td>
+                                                <button className="action-btn edit-btn" onClick={() => openModalForEdit(p)}>Edit</button>
+                                                <button className="action-btn delete-btn" onClick={() => handleDelete(p.id)}>Delete</button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        );
+                    })}
+                </div>
             )}
 
             {isModalOpen && (
                 <ProductFormModal
                     product={editingProduct}
+                    sections={sections}
                     onClose={closeModal}
                     onSubmit={handleCreateOrUpdate}
                     error={error}
@@ -142,13 +148,15 @@ function ProductManagement({ userData }) {
     );
 }
 
-function ProductFormModal({ product, onClose, onSubmit, error }) {
+// The Product Form Modal is also updated to use a dropdown for sections
+function ProductFormModal({ product, sections, onClose, onSubmit, error }) {
     const [formData, setFormData] = useState({
         name: product?.name || '',
         description: product?.description || '',
         price: product?.price || '',
         quantity: product?.quantity || '',
-        category: product?.category || ''
+        // Use sectionId for the dropdown state
+        sectionId: product?.section?.id || (sections.length > 0 ? sections[0].id : '')
     });
 
     const handleChange = (e) => {
@@ -184,8 +192,15 @@ function ProductFormModal({ product, onClose, onSubmit, error }) {
                         <input type="number" name="quantity" value={formData.quantity} onChange={handleChange} required />
                     </div>
                     <div className="input-group">
-                        <label>Category</label>
-                        <input name="category" value={formData.category} onChange={handleChange} required />
+                        <label>Section</label>
+                        {/* This is now a dropdown menu */}
+                        <select name="sectionId" value={formData.sectionId} onChange={handleChange} required>
+                            {sections.length > 0 ? (
+                                sections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)
+                            ) : (
+                                <option disabled>No sections available</option>
+                            )}
+                        </select>
                     </div>
                     <div className="modal-actions">
                         <button type="submit" className="action-btn edit-btn">{product ? 'Update' : 'Create'}</button>

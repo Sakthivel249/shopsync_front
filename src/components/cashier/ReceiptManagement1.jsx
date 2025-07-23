@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 const API_URL = 'http://localhost:8080/api/admin/receipts';
 const PRODUCTS_API_URL = 'http://localhost:8080/api/admin/products';
 
-function ReceiptManagement({ userData }) {
+function ReceiptManagement1({ userData }) {
     const [receipts, setReceipts] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
@@ -57,17 +57,7 @@ function ReceiptManagement({ userData }) {
         }
     };
 
-    const handleDelete = async (receiptId) => {
-        if (window.confirm('Are you sure you want to delete this receipt?')) {
-            try {
-                const response = await fetch(`${API_URL}/${receiptId}`, { method: 'DELETE', headers: getAuthHeaders() });
-                if (!response.ok) throw new Error('Failed to delete receipt');
-                await fetchReceipts();
-            } catch (err) {
-                alert(err.message);
-            }
-        }
-    };
+    // The handleDelete function has been removed
 
     const closeModal = () => {
         setIsCreateModalOpen(false);
@@ -102,7 +92,7 @@ function ReceiptManagement({ userData }) {
                             <td>{r.cashierEmail}</td>
                             <td>
                                 <button className="action-btn view-btn" onClick={() => setViewingReceipt(r)}>View</button>
-                                <button className="action-btn delete-btn" onClick={() => handleDelete(r.id)}>Delete</button>
+                                {/* The Delete button has been removed */}
                             </td>
                         </tr>
                     ))}
@@ -143,10 +133,14 @@ function ReceiptPOSModal({ onClose, onSubmit, userData }) {
             const headers = { 'loggedInEmail': userData.email };
             try {
                 const response = await fetch(PRODUCTS_API_URL, { headers });
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.error || "Could not load products.");
+                }
                 const data = await response.json();
                 setAllProducts(data);
             } catch (err) {
-                setError('Could not load products.');
+                setError(err.message);
             }
         };
         fetchProducts();
@@ -183,10 +177,12 @@ function ReceiptPOSModal({ onClose, onSubmit, userData }) {
 
     const totalAmount = cartItems.reduce((total, item) => total + item.product.price * item.quantity, 0);
 
-    const searchResults = searchTerm
-        ? allProducts.filter(p =>
-            p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.id.toString().includes(searchTerm)
-        )
+    const searchResults = searchTerm && Array.isArray(allProducts)
+        ? allProducts.filter(p => {
+            const nameMatch = p.name && p.name.toLowerCase().includes(searchTerm.toLowerCase());
+            const idMatch = p.id != null && p.id.toString().includes(searchTerm);
+            return nameMatch || idMatch;
+        })
         : [];
 
     const handleSubmit = async (e) => {
@@ -300,4 +296,4 @@ function ReceiptViewModal({ receipt, onClose }) {
     );
 }
 
-export default ReceiptManagement;
+export default ReceiptManagement1;
