@@ -319,3 +319,14 @@ tbody tr:hover {
     overflow-y: auto;
     padding: 2rem 0;
 }
+
+/* Add to App.css */
+.success-message {
+    color: #28a745;
+    background-color: #e9f7ef;
+    border: 1px solid #a3d9b8;
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    font-weight: 500;
+}

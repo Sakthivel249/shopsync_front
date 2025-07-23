@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import LoginForm from './components/LoginForm';
-import UserDetails from './components/UserDetails';
 import AdminDashboard from './components/admin/AdminDashboard';
+import CashierDashboard from './components/cashier/CashierDashboard'; // Import Cashier Dashboard
+import StorekeeperDashboard from './components/storekeeper/StorekeeperDashboard'; // Import Storekeeper Dashboard
 import './App.css';
 
 function App() {
@@ -28,7 +29,6 @@ function App() {
                 throw new Error(data.error || 'Something went wrong');
             }
 
-            // Store the email along with the rest of the user data
             setUserData({ ...data, email: email });
 
         } catch (err) {
@@ -43,15 +43,28 @@ function App() {
         setError('');
     };
 
+    // This function now determines which dashboard to show based on the user's role.
     const renderContent = () => {
         if (!userData) {
             return <LoginForm onLogin={handleLogin} error={error} isLoading={isLoading} />;
         }
 
-        if (userData.role === 'ADMIN') {
-            return <AdminDashboard userData={userData} onLogout={handleLogout} />;
-        } else {
-            return <UserDetails userData={userData} onLogout={handleLogout} />;
+        switch (userData.role) {
+            case 'ADMIN':
+                return <AdminDashboard userData={userData} onLogout={handleLogout} />;
+            case 'CASHIER':
+                return <CashierDashboard userData={userData} onLogout={handleLogout} />;
+            case 'STOREKEEPER':
+                return <StorekeeperDashboard userData={userData} onLogout={handleLogout} />;
+            default:
+                // A fallback for any other roles that might exist
+                return (
+                    <div className="container">
+                        <h2>Welcome, {userData.employeeName}</h2>
+                        <p>Your role ({userData.role}) does not have a specific dashboard assigned.</p>
+                        <button onClick={handleLogout} style={{width: 'auto', padding: '10px 20px'}}>Logout</button>
+                    </div>
+                );
         }
     }
 
